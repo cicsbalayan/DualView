@@ -1,11 +1,15 @@
 import { Suspense, lazy } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
 
 const SelectionPage = lazy(() => import("./pages/selection-page").then(m => ({ default: m.SelectionPage })));
 const CreateRoomFragment = lazy(() => import("./pages/create-room-fragment").then(m => ({ default: m.CreateRoomFragment })));
 const JoinControl = lazy(() => import("./pages/join-control").then(m => ({ default: m.JoinControl })));
 const MainPage = lazy(() => import("./pages/main-page").then(m => ({ default: m.MainPage })));
+const LoginPage = lazy(() => import("./pages/LoginPage").then(m => ({ default: m.LoginPage })));
+const SignupPage = lazy(() => import("./pages/SignupPage").then(m => ({ default: m.SignupPage })));
+const Dashboard = lazy(() => import("./pages/Dashboard").then(m => ({ default: m.Dashboard })));
 
 function PageLoader() {
   return (
@@ -18,16 +22,53 @@ function PageLoader() {
   );
 }
 
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return <PageLoader />;
+  }
+
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/";
+
+  if (loading) {
+    return <PageLoader />;
+  }
+
+  if (user) {
+    return <Navigate to={from} replace />;
+  }
+
+  return <>{children}</>;
+}
+
 function AnimatedRoutes() {
   const location = useLocation();
 
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<SelectionPage />} />
-        <Route path="/create-room" element={<CreateRoomFragment />} />
-        <Route path="/join-room" element={<JoinControl />} />
-        <Route path="/present/:roomCode" element={<MainPage />} />
+        {/* Public routes - redirect to dashboard if already logged in */}
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
+        
+        {/* Protected routes - require authentication */}
+        <Route path="/" element={<ProtectedRoute><SelectionPage /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/create-room" element={<ProtectedRoute><CreateRoomFragment /></ProtectedRoute>} />
+        <Route path="/join-room" element={<ProtectedRoute><JoinControl /></ProtectedRoute>} />
+        <Route path="/present/:roomCode" element={<ProtectedRoute><MainPage /></ProtectedRoute>} />
       </Routes>
     </AnimatePresence>
   );
