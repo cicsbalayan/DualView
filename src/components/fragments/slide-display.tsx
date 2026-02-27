@@ -1,4 +1,8 @@
+import { lazy, Suspense, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Loader2 } from "lucide-react";
+
+const DocViewer = lazy(() => import("@cyntler/react-doc-viewer"));
 
 interface SlideData {
   title: string;
@@ -6,6 +10,7 @@ interface SlideData {
 }
 
 interface SlideDisplayProps {
+  fileUrl?: string;
   currentSlide: number;
   currentSlideData: SlideData;
   direction: number;
@@ -20,7 +25,39 @@ const placeholderSlides = [
   { title: "Slide 5", content: "Thank you!" },
 ];
 
-export function SlideDisplay({ currentSlide, currentSlideData, direction }: SlideDisplayProps) {
+function ViewerLoader() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+export function SlideDisplay({ fileUrl, currentSlide, currentSlideData, direction }: SlideDisplayProps) {
+  // Memoize the documents array to prevent re-renders
+  const documents = useMemo(() => {
+    if (fileUrl) {
+      return [{ uri: fileUrl }];
+    }
+    return [];
+  }, [fileUrl]);
+
+  if (fileUrl && documents.length > 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-4 bg-black">
+        <div className="relative w-full h-full max-w-[95vw] max-h-[90vh]">
+          <Suspense fallback={<ViewerLoader />}>
+            <DocViewer
+              documents={documents}
+              className="h-full w-full"
+            />
+          </Suspense>
+        </div>
+      </div>
+    );
+  }
+
+  // Otherwise, show placeholder slides
   return (
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="relative w-full max-w-5xl aspect-video bg-white rounded-lg shadow-2xl overflow-hidden">
@@ -61,4 +98,3 @@ export function SlideDisplay({ currentSlide, currentSlideData, direction }: Slid
 
 // Export placeholder data for use in parent
 export const slideData = placeholderSlides;
-

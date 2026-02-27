@@ -7,11 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DashboardHeader } from '@/components/fragments';
-import { Loader2, Upload, FileText, Eye, Trash2, X } from 'lucide-react';
+import { Loader2, Upload, FileText, Monitor, Trash2, X, Smartphone } from 'lucide-react';
 import {
   pageVariants,
   staggerContainer,
   fadeInUp,
+  buttonVariants,
   defaultPageTransition,
 } from '@/lib/animation-variants';
 
@@ -22,6 +23,15 @@ interface UploadedFile {
   name: string;
   url: string;
   created_at: string;
+}
+
+function generateSessionCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 }
 
 function ViewerLoader() {
@@ -97,12 +107,20 @@ export function Dashboard() {
     }
   };
 
+  const MAX_PPT_FILES = 3;
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
     if (!file.name.endsWith('.ppt') && !file.name.endsWith('.pptx')) {
       setUploadError('Please select a PowerPoint file (.ppt or .pptx)');
+      return;
+    }
+
+    // Check if user has reached the limit
+    if (files.length >= MAX_PPT_FILES) {
+      setUploadError(`You can only store up to ${MAX_PPT_FILES} presentations. Please delete an existing file to upload a new one.`);
       return;
     }
 
@@ -163,12 +181,23 @@ export function Dashboard() {
     navigate('/login');
   };
 
-  const openViewer = (file: UploadedFile) => {
-    setSelectedFileForViewer(file);
-  };
 
   const closeViewer = () => {
     setSelectedFileForViewer(null);
+  };
+
+  const handlePresent = (file: UploadedFile) => {
+    const roomCode = generateSessionCode();
+    localStorage.setItem(
+      "castper-room",
+      JSON.stringify({
+        code: roomCode,
+        isHost: true,
+        fileUrl: file.url,
+        fileName: file.name,
+      })
+    );
+    navigate(`/present/${roomCode}`);
   };
 
   if (authLoading) {
@@ -196,78 +225,97 @@ export function Dashboard() {
 
       <main className="container mx-auto px-4 py-8">
         <motion.div 
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
           variants={staggerContainer}
           initial="initial"
           animate="animate"
         >
-          <motion.div variants={fadeInUp}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  Upload PPT
-                </CardTitle>
-                <CardDescription>
-                  Upload PowerPoint files to view them here
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <AnimatePresence mode="wait">
-                    {uploadError && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="bg-destructive/10 border border-destructive/50 text-destructive text-sm px-4 py-2 rounded-md"
-                      >
-                        {uploadError}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:bg-muted/50 transition-colors">
-                    <Input
-                      type="file"
-                      accept=".ppt,.pptx"
-                      onChange={handleUpload}
-                      disabled={uploading}
-                      className="hidden"
-                      id="file-upload"
-                    />
-                    <label
-                      htmlFor="file-upload"
-                      className="cursor-pointer flex flex-col items-center gap-2"
-                    >
-                      {uploading ? (
-                        <>
-                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Uploading...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="h-8 w-8 text-muted-foreground" />
-                          <span className="text-sm font-medium">Click to upload</span>
-                          <span className="text-xs text-muted-foreground">.ppt or .pptx files</span>
-                        </>
-                      )}
-                    </label>
-                  </div>
-                </div>
+          {/* Join Room */}
+          <motion.div variants={buttonVariants}>
+            <Card className="h-full min-h-32">
+              <CardContent className="flex items-center justify-center h-full">
+                <Button
+                  onClick={() => navigate('/join-room')}
+                  className="w-full min-h-32 p-6
+                             flex flex-col items-center justify-center gap-4
+                             rounded-2xl text-center
+                             hover:shadow-xl hover:-translate-y-1
+                             transition-all duration-300"
+                  asChild
+                >
+                  <motion.div
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    <div className="p-4 border shadow-2xl rounded-full bg-muted">
+                      <Smartphone className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <div className="text-lg font-semibold">
+                        Join Room
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        Enter code to control presentation
+                      </div>
+                    </div>
+                  </motion.div>
+                </Button>
               </CardContent>
             </Card>
           </motion.div>
 
-          <motion.div className="lg:col-span-2" variants={fadeInUp}>
+          {/* Presentations List */}
+          <motion.div variants={fadeInUp}>
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Your Presentations
-                </CardTitle>
-                <CardDescription>
-                  {files.length} file{files.length !== 1 ? 's' : ''} uploaded
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Your Presentations
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept=".ppt,.pptx"
+                      onChange={handleUpload}
+                      disabled={uploading || files.length >= MAX_PPT_FILES}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label htmlFor="file-upload">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="cursor-pointer"
+                        disabled={uploading || files.length >= MAX_PPT_FILES}
+                      >
+                        <span className="flex items-center gap-2">
+                          {uploading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                          Upload
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                </div>
+                <AnimatePresence mode="wait">
+                  {uploadError && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="bg-destructive/10 border border-destructive/50 text-destructive text-sm px-4 py-2 rounded-md mt-2"
+                    >
+                      {uploadError}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <CardDescription className={uploadError ? "mt-2" : ""}>
+                  {files.length} of {MAX_PPT_FILES} files used
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -296,13 +344,16 @@ export function Dashboard() {
                           <span className="text-sm font-medium truncate">{file.name}</span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
+                        
                           <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => openViewer(file)}
-                            title="View"
+                            variant="default"
+                            size="sm"
+                            onClick={() => handlePresent(file)}
+                            title="Present"
+                            className="gap-1"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Monitor className="h-3 w-3" />
+                            Present
                           </Button>
                           <Button
                             variant="ghost"

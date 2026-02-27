@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -96,9 +96,7 @@ export function MainPage() {
 
   return (
     <motion.div
-      className={`min-h-screen flex flex-col bg-white ${
-        isFullscreen ? "fixed inset-0 z-50" : ""
-      }`}
+      className={`min-h-screen flex flex-col ${isFullscreen ? "fixed inset-0 z-50 bg-black" : "bg-white"}`}
       initial="initial"
       animate="animate"
       exit="exit"
@@ -115,25 +113,30 @@ export function MainPage() {
       />
 
       <SlideDisplay
+        fileUrl={roomData.fileUrl}
         currentSlide={currentSlide}
         currentSlideData={currentSlideData}
         direction={direction}
       />
 
-      <SlideNavArrows
-        currentSlide={currentSlide}
-        totalSlides={totalSlides}
-        isFullscreen={isFullscreen}
-        onNext={handleNext}
-        onPrev={handlePrev}
-      />
+      {!isFullscreen && (
+        <>
+          <SlideNavArrows
+            currentSlide={currentSlide}
+            totalSlides={totalSlides}
+            isFullscreen={isFullscreen}
+            onNext={handleNext}
+            onPrev={handlePrev}
+          />
 
-      <SlideProgress currentSlide={currentSlide} totalSlides={totalSlides} />
+          <SlideProgress currentSlide={currentSlide} totalSlides={totalSlides} />
+        </>
+      )}
 
       <AnimatePresence>
         {isFullscreen && (
           <motion.div
-            className="absolute bottom-4 right-4 flex items-center gap-2 text-gray-600 text-xs"
+            className="absolute bottom-4 right-4 flex items-center gap-2 text-gray-400 text-xs"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
@@ -149,4 +152,3 @@ export function MainPage() {
 }
 
 export default MainPage;
-

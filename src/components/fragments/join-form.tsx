@@ -54,7 +54,7 @@ export function JoinForm({ onJoin }: JoinFormProps) {
         <motion.div variants={fadeInUp}>
           <Button
             variant="ghost"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")}
             className="absolute top-4 left-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

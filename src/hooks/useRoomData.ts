@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 export interface RoomData {
   code: string;
   isHost: boolean;
+  fileUrl?: string;
+  fileName?: string;
 }
 
 interface UseRoomDataResult {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,6 @@ export function LoginPage() {
   
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,7 +33,7 @@ export function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      navigate(location.state?.from?.pathname || '/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   };
 

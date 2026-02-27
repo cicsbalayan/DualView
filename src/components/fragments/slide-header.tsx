@@ -26,7 +26,11 @@ export function SlideHeader({
 
   return (
     <motion.div
-      className="flex items-center justify-between px-4 py-2 bg-white/80 backdrop-blur-sm border-b"
+      className={`flex items-center justify-between px-4 py-2 border-b ${
+        isFullscreen 
+          ? "bg-black/80 backdrop-blur-sm border-gray-800" 
+          : "bg-white/80 backdrop-blur-sm border-gray-200"
+      }`}
       variants={headerVariants}
       initial="initial"
       animate="animate"
@@ -36,14 +40,14 @@ export function SlideHeader({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/")}
-            className="text-gray-900 hover:bg-gray-100"
+            onClick={() => navigate("/dashboard")}
+            className={isFullscreen ? "text-gray-300 hover:bg-gray-800" : "text-gray-900 hover:bg-gray-100"}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Exit
           </Button>
         </motion.div>
-        <div className="flex items-center gap-2 text-gray-900">
+        <div className={`flex items-center gap-2 ${isFullscreen ? "text-gray-300" : "text-gray-900"}`}>
           <Monitor className="w-4 h-4" />
           <span className="font-mono text-sm">{roomCode}</span>
           {roomData.isHost && (
@@ -62,7 +66,7 @@ export function SlideHeader({
       <div className="flex items-center gap-2">
         {/* Slide Counter */}
         <motion.div
-          className="text-gray-900 text-sm font-mono mr-4"
+          className={`text-sm font-mono mr-4 ${isFullscreen ? "text-gray-300" : "text-gray-900"}`}
           key={currentSlide}
           initial={{ scale: 1.2 }}
           animate={{ scale: 1 }}
@@ -77,7 +81,7 @@ export function SlideHeader({
             variant="outline"
             size="sm"
             onClick={onToggleFullscreen}
-            className="bg-gray-100 border-gray-300 text-gray-900 hover:bg-gray-200"
+            className={isFullscreen ? "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700" : "bg-gray-100 border-gray-300 text-gray-900 hover:bg-gray-200"}
           >
             {isFullscreen ? (
               <Minimize className="w-4 h-4" />
@@ -90,4 +94,3 @@ export function SlideHeader({
     </motion.div>
   );
 }
-

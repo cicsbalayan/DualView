@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, Copy, ArrowLeft } from "lucide-react";
+import { Check, Copy, ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import {
@@ -11,6 +11,15 @@ import {
   scaleIn,
   defaultPageTransition,
 } from "@/lib/animation-variants";
+import { supabase, STORAGE_BUCKET } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface UploadedFile {
+  id: string;
+  name: string;
+  url: string;
+  created_at: string;
+}
 
 function generateSessionCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -23,8 +32,61 @@ function generateSessionCode(): string {
 
 export function CreateRoomFragment() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [roomCode, setRoomCode] = useState(generateSessionCode());
   const [isCopied, setIsCopied] = useState(false);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(true);
+  const [selectedFile, setSelectedFile] = useState<UploadedFile | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      loadFiles();
+    }
+  }, [user]);
+
+  const loadFiles = async () => {
+    try {
+      const { data, error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .list(user?.id + '/', {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'name', order: 'asc' },
+        });
+
+      if (error) {
+        console.error('Error listing files:', error);
+        setFiles([]);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const fileList: UploadedFile[] = data
+          .filter(file => file.name.endsWith('.ppt') || file.name.endsWith('.pptx'))
+          .map(file => {
+            const { data: urlData } = supabase.storage
+              .from(STORAGE_BUCKET)
+              .getPublicUrl(user?.id + '/' + file.name);
+            
+            return {
+              id: file.id,
+              name: file.name,
+              url: urlData.publicUrl,
+              created_at: file.created_at || new Date().toISOString(),
+            };
+          });
+        setFiles(fileList);
+      } else {
+        setFiles([]);
+      }
+    } catch (err) {
+      console.error('Error loading files:', err);
+      setFiles([]);
+    } finally {
+      setLoadingFiles(false);
+    }
+  };
 
   const copyToClipboard = async () => {
     try {
@@ -42,6 +104,8 @@ export function CreateRoomFragment() {
       JSON.stringify({
         code: roomCode,
         isHost: true,
+        fileUrl: selectedFile?.url || null,
+        fileName: selectedFile?.name || null,
       })
     );
     navigate(`/present/${roomCode}`);
@@ -69,7 +133,7 @@ export function CreateRoomFragment() {
         <motion.div variants={fadeInUp}>
           <Button
             variant="ghost"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/dashboard")}
             className="absolute top-4 left-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -133,9 +197,31 @@ export function CreateRoomFragment() {
 
         <motion.div className="bg-card border rounded-lg p-6 space-y-2" variants={slideInRight}>
           <p className="text-sm font-medium">Presentation</p>
-          <p className="text-xs text-muted-foreground">
-            Placeholder presentation will be shown
-          </p>
+          {loadingFiles ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : files.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No presentations uploaded. Go to Dashboard to upload a PPT file.
+            </p>
+          ) : (
+            <select
+              value={selectedFile?.id || ""}
+              onChange={(e) => {
+                const file = files.find(f => f.id === e.target.value);
+                setSelectedFile(file || null);
+              }}
+              className="w-full h-10 px-3 text-sm bg-background border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">Select a presentation</option>
+              {files.map((file) => (
+                <option key={file.id} value={file.id}>
+                  {file.name}
+                </option>
+              ))}
+            </select>
+          )}
         </motion.div>
 
         <motion.div variants={scaleIn}>
